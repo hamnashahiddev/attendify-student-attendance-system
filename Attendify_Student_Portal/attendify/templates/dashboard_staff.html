@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · Attendify{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">Welcome back, {{ user.first_name|default:user.username }}</h3>
+    <span class="text-muted">
+      {% if user.role == 'admin' %}Portal Overview & System Analytics{% else %}Your Teaching & Attendance Center{% endif %}
+    </span>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    {% if user.role == 'admin' %}
+      <a class="btn btn-outline-secondary" href="{% url 'student_add' %}">
+        <i class="bi bi-person-plus me-1"></i> Add Student
+      </a>
+      <a class="btn btn-outline-secondary" href="{% url 'reports' %}">
+        <i class="bi bi-file-earmark-bar-graph me-1"></i> Reports
+      </a>
+    {% endif %}
+    <a class="btn btn-primary" href="{% url 'mark' %}">
+      <i class="bi bi-check2-square me-1"></i> Mark Attendance
+    </a>
+  </div>
+</div>
+
+<!-- Key Stat Counters -->
+<div class="row g-3 mb-4">
+  {% if user.role == 'admin' %}
+    <div class="col-6 col-lg-3">
+      <div class="cardx stat">
+        <i class="bi bi-people text-primary"></i>
+        <div class="v">{{ n_students }}</div>
+        <div class="l">Total Students</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="cardx stat">
+        <i class="bi bi-person-workspace text-primary"></i>
+        <div class="v">{{ n_teachers }}</div>
+        <div class="l">Faculty Members</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="cardx stat">
+        <i class="bi bi-building text-primary"></i>
+        <div class="v">{{ n_classes }}</div>
+        <div class="l">Active Classes</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="cardx stat">
+        <i class="bi bi-book text-primary"></i>
+        <div class="v">{{ n_subjects }}</div>
+        <div class="l">Subjects Taught</div>
+      </div>
+    </div>
+  {% else %}
+    <div class="col-6 col-lg-3">
+      <div class="cardx stat">
+        <i class="bi bi-building text-primary"></i>
+        <div class="v">{{ assigned_classes.count }}</div>
+        <div class="l">Assigned Classes</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="cardx stat">
+        <i class="bi bi-journal-bookmark text-primary"></i>
+        <div class="v">{{ assigned_subjects.count }}</div>
+        <div class="l">Assigned Subjects</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="cardx stat">
+        <i class="bi bi-people text-primary"></i>
+        <div class="v">{{ total_students }}</div>
+        <div class="l">Total Enrolled Students</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="cardx stat">
+        <i class="bi bi-calendar-event text-primary"></i>
+        <div class="v">{{ today_timetable.count }}</div>
+        <div class="l">Classes Scheduled Today</div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Today's Attendance Counters -->
+<div class="row g-3 mb-4">
+  {% for k, v in today_counts.items %}
+  <div class="col-6 col-lg-3">
+    <div class="cardx stat border-top border-3 {% if k == 'Present' %}border-success{% elif k == 'Absent' %}border-danger{% elif k == 'Late' %}border-warning{% else %}border-info{% endif %}">
+      <div class="v">{{ v }}</div>
+      <div class="l">{{ k }} Today</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Charts & Highlights -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-8">
+    <div class="cardx h-100">
+      <h6 class="fw-bold mb-3"><i class="bi bi-graph-up me-2 text-primary"></i>Attendance Trend (Past 7 Days, %)</h6>
+      <canvas id="trendChart" height="110"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="cardx h-100">
+      <h6 class="fw-bold mb-3"><i class="bi bi-pie-chart me-2 text-primary"></i>Status Distribution</h6>
+      <canvas id="distChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Teacher Today's Timetable (if teacher) -->
+{% if user.role == 'teacher' and today_timetable %}
+<div class="cardx mb-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h6 class="fw-bold mb-0"><i class="bi bi-calendar3 me-2 text-primary"></i>Today's Teaching Schedule</h6>
+    <a href="{% url 'timetable' %}" class="small text-decoration-none">Full Timetable &rarr;</a>
+  </div>
+  <div class="row g-2">
+    {% for slot in today_timetable %}
+    <div class="col-md-4">
+      <div class="p-3 bg-light rounded border">
+        <div class="fw-bold text-primary">{{ slot.subject.name }} ({{ slot.classroom.name }})</div>
+        <div class="text-muted small">
+          <i class="bi bi-clock me-1"></i>{{ slot.start_time|time:"H:i" }} - {{ slot.end_time|time:"H:i" }}
+          {% if slot.room_number %} · {{ slot.room_number }}{% endif %}
+        </div>
+        <a href="{% url 'mark' %}?classroom={{ slot.classroom_id }}&subject={{ slot.subject_id }}" class="btn btn-sm btn-outline-primary mt-2">
+          Mark Attendance
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-3">
+  <!-- Low Attendance Alerts -->
+  <div class="col-lg-6">
+    <div class="cardx h-100">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-bold mb-0 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Attendance Alerts (Below {{ threshold }}%)</h6>
+        <span class="badge bg-danger rounded-pill">{{ low_students|length }} students</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Class</th>
+              <th class="text-end">Percentage</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in low_students %}
+            <tr>
+              <td>
+                <a href="{% url 'student_detail' s.pk %}" class="text-decoration-none fw-semibold">
+                  {{ s.student_id }} · {{ s.user.get_full_name }}
+                </a>
+              </td>
+              <td><span class="badge bg-light text-dark border">{{ s.classroom.name }}</span></td>
+              <td class="text-end"><span class="pill badge-{{ s.level }}">{{ s.percentage }}%</span></td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="3" class="text-center text-muted py-4">
+                <i class="bi bi-check-circle text-success fs-4 d-block mb-1"></i>
+                All students currently meet the {{ threshold }}% attendance threshold! 🎉
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Attendance Activity -->
+  <div class="col-lg-6">
+    <div class="cardx h-100">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-bold mb-0"><i class="bi bi-activity me-2 text-primary"></i>Recent Attendance Updates</h6>
+        <a href="{% url 'history' %}" class="small text-decoration-none">View All History &rarr;</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Student</th>
+              <th>Subject</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in recent_activity %}
+            <tr>
+              <td class="small text-muted">{{ a.date|date:"d M" }}</td>
+              <td class="small fw-semibold">{{ a.student.student_id }}</td>
+              <td class="small">{{ a.subject.code }}</td>
+              <td><span class="pill badge-{{ a.status }}">{{ a.get_status_display }}</span></td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" class="text-center text-muted py-4">No recent attendance records.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block js %}
+<script>
+  const trendData = {{ trend_json|safe }};
+  const distData = {{ dist_json|safe }};
+  const purple = 'hsl(282, 100%, 24%)';
+
+  const tCtx = document.getElementById('trendChart');
+  if (tCtx) {
+    new Chart(tCtx, {
+      type: 'line',
+      data: {
+        labels: trendData.labels,
+        datasets: [{
+          data: trendData.data,
+          borderColor: purple,
+          backgroundColor: 'hsla(282, 100%, 24%, 0.1)',
+          fill: true,
+          tension: 0.35,
+          pointBackgroundColor: purple,
+          pointRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { min: 0, max: 100, ticks: { callback: v => v + '%' } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  const dCtx = document.getElementById('distChart');
+  if (dCtx) {
+    new Chart(dCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Present', 'Absent', 'Late', 'Leave'],
+        datasets: [{
+          data: distData,
+          backgroundColor: ['#16a34a', '#dc2626', '#f59e0b', '#0ea5e9'],
+          borderWidth: 2,
+        }]
+      },
+      options: {
+        responsive: true,
+        cutout: '70%',
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 12 } }
+        }
+      }
+    });
+  }
+</script>
+{% endblock %}

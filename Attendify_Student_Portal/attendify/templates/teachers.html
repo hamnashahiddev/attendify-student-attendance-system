@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Teachers · Attendify{% endblock %}
+{% block page_title %}Faculty & Teachers{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">Faculty & Teachers</h3>
+    <p class="text-muted mb-0">Manage teaching staff, class teachers, and subject assignments</p>
+  </div>
+  {% if user.role == 'admin' %}
+  <div>
+    <a class="btn btn-primary" href="{% url 'teacher_add' %}">
+      <i class="bi bi-person-plus me-1"></i> Add Faculty Member
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Search & Filters -->
+<div class="cardx mb-4">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-md-8">
+      <input class="form-control form-control-sm" name="q" value="{{ q }}" placeholder="Search by teacher name, username, or email...">
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-sm btn-primary w-100">
+        <i class="bi bi-search me-1"></i> Search
+      </button>
+    </div>
+    <div class="col-md-2">
+      <a href="{% url 'teachers' %}" class="btn btn-sm btn-light border w-100">Reset</a>
+    </div>
+  </form>
+</div>
+
+<!-- Teachers Grid / Table -->
+<div class="row g-3 mb-4">
+  {% for t in page %}
+  <div class="col-md-6 col-lg-4">
+    <div class="cardx h-100 d-flex flex-column">
+      <div class="d-flex align-items-center gap-3 mb-3">
+        <span class="avatar avatar-lg shadow-sm">
+          {% if t.photo %}
+            <img src="{{ t.photo.url }}" alt="{{ t.first_name }}">
+          {% else %}
+            {{ t.first_name|slice:":1"|upper }}
+          {% endif %}
+        </span>
+        <div class="overflow-hidden">
+          <h6 class="fw-bold mb-0 text-truncate">{{ t.get_full_name }}</h6>
+          <small class="text-muted d-block text-truncate">{{ t.email }}</small>
+          <span class="badge bg-light text-primary border mt-1">Faculty Member</span>
+        </div>
+      </div>
+
+      <div class="small border-top pt-2 mb-3 flex-grow-1">
+        <div class="d-flex justify-content-between py-1">
+          <span class="text-muted">Username:</span>
+          <b>{{ t.username }}</b>
+        </div>
+        <div class="d-flex justify-content-between py-1">
+          <span class="text-muted">Phone:</span>
+          <span>{{ t.phone|default:"—" }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-1">
+          <span class="text-muted">Assigned Classes:</span>
+          <span class="badge bg-light text-dark border">{{ t.get_assigned_classes.count }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-1">
+          <span class="text-muted">Taught Subjects:</span>
+          <span class="badge bg-light text-dark border">{{ t.taught_subjects.count }}</span>
+        </div>
+      </div>
+
+      <div class="border-top pt-2 d-flex justify-content-between align-items-center">
+        <a href="{% url 'teacher_detail' t.pk %}" class="btn btn-sm btn-light border">
+          <i class="bi bi-eye me-1"></i> View
+        </a>
+        {% if user.role == 'admin' %}
+        <div class="d-flex gap-1">
+          <a href="{% url 'teacher_edit' t.pk %}" class="btn btn-sm btn-light border" title="Edit Teacher">
+            <i class="bi bi-pencil"></i>
+          </a>
+          <form method="post" action="{% url 'teacher_delete' t.pk %}" class="d-inline" onsubmit="return confirm('Delete teacher {{ t.get_full_name }}?')">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-outline-danger" title="Delete">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="cardx text-center py-5 text-muted">
+      <i class="bi bi-person-x fs-1 d-block mb-2 text-secondary"></i>
+      No faculty members found.
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if page.paginator.num_pages > 1 %}
+<div class="d-flex justify-content-between align-items-center">
+  <div class="small text-muted">
+    Page {{ page.number }} of {{ page.paginator.num_pages }}
+  </div>
+  <div class="btn-group">
+    {% if page.has_previous %}
+      <a class="btn btn-sm btn-outline-secondary" href="?page={{ page.previous_page_number }}{% if q %}&q={{ q }}{% endif %}">Prev</a>
+    {% endif %}
+    <button class="btn btn-sm btn-primary active disabled">{{ page.number }}</button>
+    {% if page.has_next %}
+      <a class="btn btn-sm btn-outline-secondary" href="?page={{ page.next_page_number }}{% if q %}&q={{ q }}{% endif %}">Next</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Timetable · Attendify{% endblock %}
+{% block page_title %}Academic Schedule & Timetable{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">Weekly Schedule & Timetable</h3>
+    <p class="text-muted mb-0">Weekly class and teaching lecture distribution</p>
+  </div>
+  {% if user.role == 'admin' %}
+  <div>
+    <a class="btn btn-primary" href="{% url 'timetable_add' %}">
+      <i class="bi bi-plus-lg me-1"></i> Add Timetable Slot
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Filter for Admin/Teacher -->
+{% if user.role != 'student' %}
+<div class="cardx mb-4">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-md-5">
+      <label class="form-label small">View by Class</label>
+      <select class="form-select form-select-sm" name="class" onchange="this.form.submit()">
+        <option value="">All Classes</option>
+        {% for c in classes %}
+        <option value="{{ c.pk }}" {% if selected_class == c.pk|stringformat:'s' %}selected{% endif %}>
+          {{ c.name }} ({{ c.department.code }})
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-5">
+      <label class="form-label small">View by Teacher</label>
+      <select class="form-select form-select-sm" name="teacher" onchange="this.form.submit()">
+        <option value="">All Faculty</option>
+        {% for t in teachers %}
+        <option value="{{ t.pk }}" {% if selected_teacher == t.pk|stringformat:'s' %}selected{% endif %}>
+          {{ t.get_full_name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <a href="{% url 'timetable' %}" class="btn btn-sm btn-light border w-100">Reset View</a>
+    </div>
+  </form>
+</div>
+{% endif %}
+
+<!-- Weekly Timetable Cards Grid (Monday - Saturday) -->
+<div class="row g-3">
+  {% for day in days_display %}
+  <div class="col-md-6 col-lg-4">
+    <div class="tt-day-card h-100 shadow-sm">
+      <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+        <h6 class="fw-bold mb-0 text-primary">
+          <i class="bi bi-calendar-event me-2"></i>{{ day.name }}
+        </h6>
+        <span class="badge bg-light text-muted border">{{ day.entries|length }} classes</span>
+      </div>
+
+      {% for slot in day.entries %}
+      <div class="tt-slot">
+        <div class="d-flex justify-content-between align-items-start">
+          <span class="fw-bold text-dark">{{ slot.subject.name }}</span>
+          <span class="badge bg-purple-light text-primary">
+            {{ slot.start_time|time:"H:i" }} - {{ slot.end_time|time:"H:i" }}
+          </span>
+        </div>
+        <div class="text-muted small mt-1">
+          <i class="bi bi-building me-1"></i>{{ slot.classroom.name }}
+          {% if slot.room_number %} · <i class="bi bi-geo-alt me-1"></i>{{ slot.room_number }}{% endif %}
+        </div>
+        <div class="text-muted small">
+          <i class="bi bi-person me-1"></i>{{ slot.teacher.get_full_name|default:"Unassigned" }}
+        </div>
+
+        {% if user.role == 'admin' %}
+        <div class="d-flex justify-content-end gap-1 mt-2 pt-1 border-top">
+          <a href="{% url 'timetable_edit' slot.pk %}" class="btn btn-sm btn-light py-0 px-2 border" title="Edit">
+            <i class="bi bi-pencil" style="font-size: 0.75rem;"></i>
+          </a>
+          <form method="post" action="{% url 'timetable_delete' slot.pk %}" class="d-inline" onsubmit="return confirm('Delete this timetable slot?')">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-outline-danger py-0 px-2" title="Delete">
+              <i class="bi bi-trash" style="font-size: 0.75rem;"></i>
+            </button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+      {% empty %}
+      <div class="text-center text-muted py-4 small">
+        <i class="bi bi-cup-hot text-secondary fs-4 d-block mb-1"></i>
+        No lectures scheduled
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

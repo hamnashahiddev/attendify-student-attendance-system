@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}Mark Attendance · Attendify{% endblock %}
+{% block page_title %}Attendance Marking Portal{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">Mark Attendance</h3>
+    <p class="text-muted mb-0">Record and update daily student attendance</p>
+  </div>
+  <a href="{% url 'history' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-clock-history me-1"></i> View Attendance History
+  </a>
+</div>
+
+<!-- Selection Form -->
+<div class="cardx mb-4">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-md-4">
+      <label class="form-label">Class</label>
+      <select class="form-select" name="classroom" id="classSelect" onchange="this.form.submit()">
+        <option value="">Choose Class...</option>
+        {% for c in classes %}
+          <option value="{{ c.pk }}" {% if selected_class_id == c.pk|stringformat:'s' %}selected{% endif %}>
+            {{ c.name }} ({{ c.department.code }})
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Subject</label>
+      <select class="form-select" name="subject" required>
+        <option value="">Select Subject...</option>
+        {% for s in subjects %}
+          <option value="{{ s.pk }}" {% if subject and s.pk == subject.pk %}selected{% endif %}>
+            {{ s.name }} ({{ s.code }}) - {{ s.classroom.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Session Date</label>
+      <input type="date" class="form-control" name="date" value="{{ date|date:'Y-m-d' }}" required>
+    </div>
+
+    <div class="col-md-1">
+      <button type="submit" class="btn btn-primary w-100" title="Load Students">
+        <i class="bi bi-arrow-clockwise"></i>
+      </button>
+    </div>
+  </form>
+</div>
+
+{% if subject %}
+  {% if existing %}
+    <div class="alert alert-warning d-flex align-items-center mb-3 shadow-sm" role="alert">
+      <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+      <div>
+        <strong>Notice:</strong> Attendance for <b>{{ subject.name }}</b> on <b>{{ date|date:'d M Y' }}</b> has already been saved.
+        You can review and update the recorded statuses below.
+      </div>
+    </div>
+  {% else %}
+    <div class="alert alert-info d-flex align-items-center mb-3 shadow-sm" role="alert">
+      <i class="bi bi-info-circle-fill fs-4 me-3"></i>
+      <div>
+        Ready to record new attendance for <b>{{ subject.name }}</b> ({{ subject.classroom.name }}) on <b>{{ date|date:'d M Y' }}</b>.
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Batch Action & Quick Filter Bar -->
+  <form method="post" action="{% url 'mark' %}">
+    {% csrf_token %}
+    <input type="hidden" name="classroom" value="{{ subject.classroom.pk }}">
+    <input type="hidden" name="subject" value="{{ subject.pk }}">
+    <input type="hidden" name="date" value="{{ date|date:'Y-m-d' }}">
+
+    <div class="cardx mb-3 py-2 px-3">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2">
+          <span class="small fw-bold text-muted text-uppercase">Batch:</span>
+          <button type="button" class="btn btn-sm btn-outline-success" onclick="setAll('P')">
+            <i class="bi bi-check-all me-1"></i> All Present
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-danger" onclick="setAll('A')">
+            <i class="bi bi-x-circle me-1"></i> All Absent
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-warning" onclick="setAll('L')">
+            <i class="bi bi-clock me-1"></i> All Late
+          </button>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <input type="text" id="studentFilter" class="form-control form-control-sm" placeholder="Filter by student name or ID..." onkeyup="filterStudents(this.value)" style="max-width: 260px;">
+          <span class="badge bg-light text-dark border py-2" id="studentCountBadge">{{ rows|length }} Students</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Student Attendance Table -->
+    <div class="cardx table-responsive mb-4">
+      <table class="table table-hover align-middle mb-0" id="attendanceTable">
+        <thead>
+          <tr>
+            <th style="width: 140px;">Student ID</th>
+            <th>Full Name</th>
+            <th style="width: 140px;">Current Att %</th>
+            <th style="width: 200px;">Status</th>
+            <th>Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s, a in rows %}
+          <tr class="student-row">
+            <td class="fw-bold sid">{{ s.student_id }}</td>
+            <td class="sname">
+              <div class="d-flex align-items-center gap-2">
+                <span class="avatar" style="width: 30px; height: 30px; font-size: 0.8rem;">
+                  {{ s.user.first_name|slice:":1" }}
+                </span>
+                <div>
+                  <div class="fw-semibold">{{ s.user.get_full_name }}</div>
+                  <small class="text-muted">{{ s.user.email }}</small>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="pill badge-{{ s.level }}">{{ s.percentage }}%</span>
+            </td>
+            <td>
+              <select class="form-select form-select-sm status-select fw-semibold" name="s{{ s.pk }}" required>
+                {% for code, label in statuses %}
+                <option value="{{ code }}" {% if a and a.status == code %}selected{% elif not a and code == 'P' %}selected{% endif %}>
+                  {{ label }} ({{ code }})
+                </option>
+                {% endfor %}
+              </select>
+            </td>
+            <td>
+              <input type="text" class="form-control form-control-sm" name="r{{ s.pk }}" value="{{ a.remarks|default:'' }}" placeholder="Optional notes/remarks" maxlength="200">
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center text-muted py-5">
+              <i class="bi bi-person-x fs-1 d-block mb-2 text-secondary"></i>
+              No active students enrolled in {{ subject.classroom.name }}.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if rows %}
+    <div class="d-flex justify-content-between align-items-center mb-5">
+      <a href="{% url 'home' %}" class="btn btn-light">Cancel</a>
+      <button type="submit" class="btn btn-primary px-4 py-2 fw-semibold" onclick="return confirm('Save attendance for this session?')">
+        <i class="bi bi-save me-1"></i> Save Attendance
+      </button>
+    </div>
+    {% endif %}
+  </form>
+{% else %}
+  <div class="cardx text-center py-5">
+    <i class="bi bi-arrow-up-circle fs-1 text-primary d-block mb-3"></i>
+    <h5>Select Class and Subject</h5>
+    <p class="text-muted" style="max-width: 480px; margin: 0 auto;">
+      Please select a classroom, subject, and session date from the filters above and click Load to view enrolled students and mark attendance.
+    </p>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block js %}
+<script>
+  function setAll(statusCode) {
+    document.querySelectorAll('.status-select').forEach(select => {
+      // Only set if parent row is visible
+      if (select.closest('tr').style.display !== 'none') {
+        select.value = statusCode;
+      }
+    });
+  }
+
+  function filterStudents(query) {
+    const q = query.toLowerCase().trim();
+    let visibleCount = 0;
+    document.querySelectorAll('.student-row').forEach(row => {
+      const name = row.querySelector('.sname').textContent.toLowerCase();
+      const sid = row.querySelector('.sid').textContent.toLowerCase();
+      if (name.includes(q) || sid.includes(q)) {
+        row.style.display = '';
+        visibleCount++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+    const badge = document.getElementById('studentCountBadge');
+    if (badge) {
+      badge.textContent = visibleCount + ' Students';
+    }
+  }
+</script>
+{% endblock %}

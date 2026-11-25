@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}{{ s.user.get_full_name }} · Student Profile{% endblock %}
+{% block page_title %}Student Details{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+  <div class="d-flex align-items-center gap-3">
+    <span class="avatar avatar-lg shadow-sm">
+      {% if s.user.photo %}
+        <img src="{{ s.user.photo.url }}" alt="{{ s.user.first_name }}">
+      {% else %}
+        {{ s.user.first_name|slice:":1"|upper }}
+      {% endif %}
+    </span>
+    <div>
+      <h3 class="fw-bold mb-1">{{ s.user.get_full_name }}</h3>
+      <p class="text-muted mb-0">
+        Student ID: <b>{{ s.student_id }}</b> · Class: <b>{{ s.classroom.name }}</b> ({{ s.classroom.department.name }})
+      </p>
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'students' %}" class="btn btn-light border">
+      <i class="bi bi-arrow-left me-1"></i> Back to Students
+    </a>
+    {% if user.role == 'admin' %}
+    <a href="{% url 'student_edit' s.pk %}" class="btn btn-outline-primary">
+      <i class="bi bi-pencil me-1"></i> Edit Student
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Info & Stats Row -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-4">
+    <div class="cardx stat h-100">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <span class="l">Attendance Standing</span>
+        <span class="pill badge-{{ s.level }}">{{ s.level|upper }}</span>
+      </div>
+      <div class="v text-primary">{{ s.percentage }}%</div>
+      <div class="progress mt-2" style="height: 10px;">
+        <div class="progress-bar" style="width: {{ s.percentage }}%; background: var(--{% if s.level == 'safe' %}success{% elif s.level == 'warning' %}warning{% else %}danger{% endif %});"></div>
+      </div>
+      <div class="small text-muted mt-2">{{ attended }} attended out of {{ total }} total sessions</div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="cardx h-100">
+      <h6 class="fw-bold mb-3"><i class="bi bi-info-circle me-2 text-primary"></i>Personal & Contact Details</h6>
+      <div class="row g-2 small">
+        <div class="col-sm-6"><b>Email:</b> <span class="text-muted">{{ s.user.email }}</span></div>
+        <div class="col-sm-6"><b>Phone:</b> <span class="text-muted">{{ s.user.phone|default:"Not provided" }}</span></div>
+        <div class="col-sm-6"><b>Department:</b> <span class="text-muted">{{ s.classroom.department.name }} ({{ s.classroom.department.code }})</span></div>
+        <div class="col-sm-6"><b>Class Teacher:</b> <span class="text-muted">{{ s.classroom.class_teacher.get_full_name|default:"Unassigned" }}</span></div>
+        <div class="col-sm-6"><b>Enrollment Date:</b> <span class="text-muted">{{ s.created_at|date:"d M Y" }}</span></div>
+        <div class="col-sm-6"><b>Status:</b> <span class="badge {% if s.status == 'active' %}bg-success{% else %}bg-secondary{% endif %}">{{ s.get_status_display }}</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Attendance Counts Breakdown -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="cardx stat border-top border-3 border-success text-center">
+      <div class="v text-success">{{ present }}</div>
+      <div class="l">Present Sessions</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="cardx stat border-top border-3 border-danger text-center">
+      <div class="v text-danger">{{ absent }}</div>
+      <div class="l">Absent Sessions</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="cardx stat border-top border-3 border-warning text-center">
+      <div class="v text-warning">{{ late }}</div>
+      <div class="l">Late Marks</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="cardx stat border-top border-3 border-info text-center">
+      <div class="v text-info">{{ leave }}</div>
+      <div class="l">Approved Leaves</div>
+    </div>
+  </div>
+</div>
+
+<!-- Subject Breakdown -->
+<div class="cardx mb-4">
+  <h6 class="fw-bold mb-3"><i class="bi bi-book me-2 text-primary"></i>Subject Breakdown</h6>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Subject</th>
+          <th>Faculty</th>
+          <th class="text-center">Total</th>
+          <th class="text-center">Attended (P+L)</th>
+          <th class="text-center">Present</th>
+          <th class="text-center">Absent</th>
+          <th class="text-center">Late</th>
+          <th class="text-center">Leave</th>
+          <th class="text-end">Percentage</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in subjects_data %}
+        <tr>
+          <td>
+            <div class="fw-semibold">{{ item.subject.name }}</div>
+            <small class="text-muted">{{ item.subject.code }}</small>
+          </td>
+          <td>{{ item.subject.teacher.get_full_name|default:"TBA" }}</td>
+          <td class="text-center">{{ item.stats.total }}</td>
+          <td class="text-center fw-semibold">{{ item.stats.attended }}</td>
+          <td class="text-center text-success">{{ item.stats.present }}</td>
+          <td class="text-center text-danger">{{ item.stats.absent }}</td>
+          <td class="text-center text-warning">{{ item.stats.late }}</td>
+          <td class="text-center text-info">{{ item.stats.leave }}</td>
+          <td class="text-end">
+            <span class="fw-bold">{{ item.stats.pct }}%</span>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" class="text-center text-muted py-3">No subjects assigned to this classroom.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Recent Attendance Records -->
+<div class="cardx mb-4">
+  <h6 class="fw-bold mb-3"><i class="bi bi-clock-history me-2 text-primary"></i>Recent Attendance Records (Last 20)</h6>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Subject</th>
+          <th>Status</th>
+          <th>Remarks</th>
+          <th>Recorded By</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in recent %}
+        <tr>
+          <td class="fw-semibold">{{ a.date|date:"D, d M Y" }}</td>
+          <td>{{ a.subject.name }}</td>
+          <td><span class="pill badge-{{ a.status }}">{{ a.get_status_display }}</span></td>
+          <td class="small text-muted">{{ a.remarks|default:"—" }}</td>
+          <td class="small text-muted">{{ a.marked_by.get_full_name|default:a.marked_by.username|default:"System" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center text-muted py-4">No attendance records logged for this student yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

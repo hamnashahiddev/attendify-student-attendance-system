@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{% if editing %}Edit Announcement{% else %}New Announcement{% endif %} · Attendify{% endblock %}
+{% block page_title %}{% if editing %}Edit Campus Circular{% else %}Publish Circular{% endif %}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">{% if editing %}Edit Announcement{% else %}New Announcement{% endif %}</h3>
+    <p class="text-muted mb-0">Publish an update to students, teachers, or all users</p>
+  </div>
+  <a href="{% url 'announcements' %}" class="btn btn-light border">
+    <i class="bi bi-arrow-left me-1"></i> Back to Announcements
+  </a>
+</div>
+
+<div class="row">
+  <div class="col-lg-6">
+    <div class="cardx">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+          {% for err in form.non_field_errors %}{{ err }}{% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="mb-3">
+          <label class="form-label">Announcement Title <span class="text-danger">*</span></label>
+          {{ form.title }}
+          {% for e in form.title.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Message / Details <span class="text-danger">*</span></label>
+          {{ form.message }}
+          {% for e in form.message.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Target Audience <span class="text-danger">*</span></label>
+          {{ form.target_role }}
+          {% for e in form.target_role.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label">Expiration Date (Optional)</label>
+          {{ form.expires_at }}
+          {% for e in form.expires_at.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+          <small class="text-muted">Announcement will automatically archive after this date.</small>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary px-4">Publish Announcement</button>
+          <a class="btn btn-light border" href="{% url 'announcements' %}">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

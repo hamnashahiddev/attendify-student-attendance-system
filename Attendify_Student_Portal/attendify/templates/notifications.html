@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Notifications · Attendify{% endblock %}
+{% block page_title %}Notifications{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">My Notifications</h3>
+    <p class="text-muted mb-0">System alerts, attendance notifications, and updates</p>
+  </div>
+  {% if notifications %}
+  <div>
+    <a href="{% url 'notifications_mark_all_read' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-check2-all me-1"></i> Mark All as Read
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<div class="cardx">
+  <div class="list-group list-group-flush">
+    {% for n in notifications %}
+    <div class="list-group-item px-3 py-3 border-bottom d-flex justify-content-between align-items-center {% if not n.is_read %}bg-purple-light{% endif %}">
+      <div>
+        <div class="fw-bold {% if not n.is_read %}text-primary{% endif %}">{{ n.title }}</div>
+        <div class="small text-muted">{{ n.message }}</div>
+        <small class="text-secondary" style="font-size: 0.75rem;">
+          <i class="bi bi-clock me-1"></i>{{ n.created_at|date:"d M Y, H:i" }}
+        </small>
+      </div>
+      <div>
+        {% if not n.is_read %}
+        <a href="{% url 'notification_read' n.pk %}" class="btn btn-sm btn-primary">
+          Mark Read
+        </a>
+        {% else %}
+        <span class="badge bg-light text-muted border">Read</span>
+        {% endif %}
+      </div>
+    </div>
+    {% empty %}
+    <div class="text-center text-muted py-5">
+      <i class="bi bi-bell-slash fs-1 d-block mb-2 text-secondary"></i>
+      You have no notifications.
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

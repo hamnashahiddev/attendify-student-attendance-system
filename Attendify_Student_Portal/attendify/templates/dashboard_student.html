@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}Student Dashboard · Attendify{% endblock %}
+{% block page_title %}My Attendance & Academic Portal{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">Hello, {{ user.first_name }}</h3>
+    <p class="text-muted mb-0">
+      <i class="bi bi-mortarboard me-1 text-primary"></i> Class: <b>{{ student.classroom.name }}</b> ({{ student.classroom.department.name }})
+      · Student ID: <b>{{ student.student_id }}</b>
+    </p>
+  </div>
+  <div>
+    <a href="{% url 'timetable' %}" class="btn btn-outline-primary">
+      <i class="bi bi-calendar3 me-1"></i> View Full Timetable
+    </a>
+  </div>
+</div>
+
+<!-- Warning Alert if below threshold -->
+{% if student.percentage < threshold %}
+<div class="alert alert-danger d-flex align-items-center mb-4 shadow-sm" role="alert">
+  <i class="bi bi-exclamation-octagon-fill fs-4 me-3"></i>
+  <div>
+    <h6 class="alert-heading fw-bold mb-1">Low Attendance Advisory</h6>
+    <div>Your current attendance is <b>{{ student.percentage }}%</b>, which is below the required institution minimum of <b>{{ threshold }}%</b>. Please meet your department coordinator.</div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Overall Stat Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-12 col-lg-4">
+    <div class="cardx stat h-100">
+      <div class="d-flex justify-content-between align-items-center">
+        <span class="l">Overall Attendance</span>
+        <span class="pill badge-{{ student.level }}">{{ student.level|upper }}</span>
+      </div>
+      <div class="v text-primary">{{ student.percentage }}%</div>
+      <div class="progress mt-2" style="height: 10px;">
+        <div class="progress-bar" role="progressbar" style="width: {{ student.percentage }}%; background: var(--{% if student.level == 'safe' %}success{% elif student.level == 'warning' %}warning{% else %}danger{% endif %});"></div>
+      </div>
+      <small class="text-muted mt-2">{{ attended }} attended out of {{ total }} total sessions</small>
+    </div>
+  </div>
+
+  <div class="col-6 col-lg-2">
+    <div class="cardx stat h-100 border-top border-3 border-success">
+      <div class="v text-success">{{ present }}</div>
+      <div class="l">Present Days</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-2">
+    <div class="cardx stat h-100 border-top border-3 border-danger">
+      <div class="v text-danger">{{ absent }}</div>
+      <div class="l">Absent Days</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-2">
+    <div class="cardx stat h-100 border-top border-3 border-warning">
+      <div class="v text-warning">{{ late }}</div>
+      <div class="l">Late Marks</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-2">
+    <div class="cardx stat h-100 border-top border-3 border-info">
+      <div class="v text-info">{{ leave }}</div>
+      <div class="l">Approved Leaves</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <!-- Subject-wise Attendance Breakdown -->
+  <div class="col-lg-7">
+    <div class="cardx h-100">
+      <h6 class="fw-bold mb-3"><i class="bi bi-book me-2 text-primary"></i>Subject-Wise Attendance</h6>
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Teacher</th>
+              <th class="text-center">Attended / Total</th>
+              <th class="text-end">Percentage</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in subjects_data %}
+            <tr>
+              <td>
+                <div class="fw-semibold">{{ item.subject.name }}</div>
+                <small class="text-muted">{{ item.subject.code }}</small>
+              </td>
+              <td class="small">{{ item.subject.teacher.get_full_name|default:"TBA" }}</td>
+              <td class="text-center small">{{ item.stats.attended }} / {{ item.stats.total }}</td>
+              <td class="text-end">
+                <span class="fw-bold me-2">{{ item.stats.pct }}%</span>
+                <div class="progress d-inline-flex" style="width: 60px; height: 6px;">
+                  <div class="progress-bar {% if item.stats.pct >= threshold %}bg-success{% else %}bg-danger{% endif %}" style="width: {{ item.stats.pct }}%;"></div>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" class="text-center text-muted py-4">No subjects enrolled in this class.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Today's Classes -->
+  <div class="col-lg-5">
+    <div class="cardx h-100">
+      <h6 class="fw-bold mb-3"><i class="bi bi-calendar-day me-2 text-primary"></i>Today's Schedule</h6>
+      <div class="list-group list-group-flush">
+        {% for slot in today_timetable %}
+        <div class="list-group-item px-0 py-2 border-bottom">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="fw-semibold text-primary">{{ slot.subject.name }}</div>
+              <small class="text-muted">
+                {{ slot.teacher.get_full_name|default:"TBA" }}
+                {% if slot.room_number %}· {{ slot.room_number }}{% endif %}
+              </small>
+            </div>
+            <span class="badge bg-light text-dark border">
+              {{ slot.start_time|time:"H:i" }} - {{ slot.end_time|time:"H:i" }}
+            </span>
+          </div>
+        </div>
+        {% empty %}
+        <p class="text-muted text-center py-4 mb-0">No classes scheduled for today.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Recent Attendance Records -->
+  <div class="col-lg-7">
+    <div class="cardx h-100">
+      <h6 class="fw-bold mb-3"><i class="bi bi-clock-history me-2 text-primary"></i>Recent Attendance Records</h6>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Subject</th>
+              <th>Status</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in recent_records %}
+            <tr>
+              <td>{{ a.date|date:"D, d M Y" }}</td>
+              <td class="fw-semibold">{{ a.subject.name }}</td>
+              <td><span class="pill badge-{{ a.status }}">{{ a.get_status_display }}</span></td>
+              <td class="small text-muted">{{ a.remarks|default:"—" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" class="text-center text-muted py-4">No attendance records found.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Announcements -->
+  <div class="col-lg-5">
+    <div class="cardx h-100">
+      <h6 class="fw-bold mb-3"><i class="bi bi-megaphone me-2 text-primary"></i>Campus Announcements</h6>
+      {% for ann in announcements %}
+      <div class="border-bottom pb-2 mb-2">
+        <div class="fw-semibold">{{ ann.title }}</div>
+        <p class="small text-muted mb-1">{{ ann.message|truncatewords:20 }}</p>
+        <small class="text-muted" style="font-size: 0.75rem;">
+          <i class="bi bi-clock me-1"></i>{{ ann.created_at|date:"d M Y" }}
+        </small>
+      </div>
+      {% empty %}
+      <p class="text-muted text-center py-4 mb-0">No active announcements.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

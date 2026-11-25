@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{% if editing %}Edit Department{% else %}Add Department{% endif %} · Attendify{% endblock %}
+{% block page_title %}{% if editing %}Edit Academic Department{% else %}Create Academic Department{% endif %}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">{% if editing %}Edit Department{% else %}Create New Department{% endif %}</h3>
+    <p class="text-muted mb-0">Define department name and its unique short code</p>
+  </div>
+  <a href="{% url 'departments' %}" class="btn btn-light border">
+    <i class="bi bi-arrow-left me-1"></i> Back to Departments
+  </a>
+</div>
+
+<div class="row">
+  <div class="col-lg-6">
+    <div class="cardx">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+          {% for err in form.non_field_errors %}{{ err }}{% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="mb-3">
+          <label class="form-label">Department Name <span class="text-danger">*</span></label>
+          {{ form.name }}
+          {% for e in form.name.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+          <small class="text-muted">e.g. Computer Science, Electrical Engineering</small>
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label">Department Code <span class="text-danger">*</span></label>
+          {{ form.code }}
+          {% for e in form.code.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+          <small class="text-muted">Unique code e.g. CS, EE, SE, BBA</small>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary px-4">Save Department</button>
+          <a class="btn btn-light border" href="{% url 'departments' %}">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

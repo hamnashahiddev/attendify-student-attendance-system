@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Attendance History · Attendify{% endblock %}
+{% block page_title %}Attendance Logs & History{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">Attendance History</h3>
+    <p class="text-muted mb-0">Browse, filter, and export student attendance logs</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'attendance_export' %}?{{ querystring }}" class="btn btn-outline-success">
+      <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export to CSV
+    </a>
+    <a href="{% url 'mark' %}" class="btn btn-primary">
+      <i class="bi bi-check2-square me-1"></i> Mark Attendance
+    </a>
+  </div>
+</div>
+
+<!-- Filters Card -->
+<div class="cardx mb-4">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-md-2">
+      <label class="form-label small">Class</label>
+      <select class="form-select form-select-sm" name="class">
+        <option value="">All Classes</option>
+        {% for c in classes %}
+        <option value="{{ c.pk }}" {% if selected_class == c.pk|stringformat:'s' %}selected{% endif %}>
+          {{ c.name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label small">Subject</label>
+      <select class="form-select form-select-sm" name="subject">
+        <option value="">All Subjects</option>
+        {% for s in subjects %}
+        <option value="{{ s.pk }}" {% if selected_subject == s.pk|stringformat:'s' %}selected{% endif %}>
+          {{ s.name }} ({{ s.classroom.name }})
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-2">
+      <label class="form-label small">Status</label>
+      <select class="form-select form-select-sm" name="status">
+        <option value="">Any Status</option>
+        {% for k, n in statuses %}
+        <option value="{{ k }}" {% if selected_status == k %}selected{% endif %}>{{ n }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-2">
+      <label class="form-label small">From Date</label>
+      <input type="date" class="form-control form-control-sm" name="from" value="{{ from_date }}">
+    </div>
+
+    <div class="col-md-2">
+      <label class="form-label small">To Date</label>
+      <input type="date" class="form-control form-control-sm" name="to" value="{{ to_date }}">
+    </div>
+
+    <div class="col-md-3 mt-2">
+      <input type="text" class="form-control form-control-sm" name="q" value="{{ q }}" placeholder="Search Student ID or Name...">
+    </div>
+
+    <div class="col-md-3 mt-2 d-flex gap-2">
+      <button type="submit" class="btn btn-sm btn-primary flex-grow-1">
+        <i class="bi bi-funnel me-1"></i> Apply Filters
+      </button>
+      <a href="{% url 'history' %}" class="btn btn-sm btn-light border" title="Reset Filters">
+        Reset
+      </a>
+    </div>
+  </form>
+</div>
+
+<!-- History Table -->
+<div class="cardx table-responsive mb-4">
+  <table class="table table-hover align-middle mb-0">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Student ID</th>
+        <th>Student Name</th>
+        <th>Class</th>
+        <th>Subject</th>
+        <th>Status</th>
+        <th>Remarks</th>
+        <th>Marked By</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in page %}
+      <tr>
+        <td class="text-nowrap fw-semibold">{{ a.date|date:"Y-m-d" }}</td>
+        <td>
+          <a href="{% url 'student_detail' a.student.pk %}" class="text-decoration-none fw-bold">
+            {{ a.student.student_id }}
+          </a>
+        </td>
+        <td>{{ a.student.user.get_full_name }}</td>
+        <td><span class="badge bg-light text-dark border">{{ a.student.classroom.name }}</span></td>
+        <td>{{ a.subject.name }}</td>
+        <td><span class="pill badge-{{ a.status }}">{{ a.get_status_display }}</span></td>
+        <td class="small text-muted">{{ a.remarks|default:"—" }}</td>
+        <td class="small text-muted">{{ a.marked_by.get_full_name|default:a.marked_by.username|default:"System" }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="text-center text-muted py-5">
+          <i class="bi bi-calendar-x fs-1 d-block mb-2 text-secondary"></i>
+          No attendance records match the specified filters.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Pagination with preserved filters -->
+{% if page.paginator.num_pages > 1 %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+  <div class="small text-muted">
+    Showing page {{ page.number }} of {{ page.paginator.num_pages }} ({{ page.paginator.count }} total records)
+  </div>
+  <div class="btn-group">
+    {% if page.has_previous %}
+      <a class="btn btn-sm btn-outline-secondary" href="?page=1{% if querystring %}&{{ querystring }}{% endif %}">First</a>
+      <a class="btn btn-sm btn-outline-secondary" href="?page={{ page.previous_page_number }}{% if querystring %}&{{ querystring }}{% endif %}">Previous</a>
+    {% endif %}
+
+    <button type="button" class="btn btn-sm btn-primary active disabled">{{ page.number }}</button>
+
+    {% if page.has_next %}
+      <a class="btn btn-sm btn-outline-secondary" href="?page={{ page.next_page_number }}{% if querystring %}&{{ querystring }}{% endif %}">Next</a>
+      <a class="btn btn-sm btn-outline-secondary" href="?page={{ page.paginator.num_pages }}{% if querystring %}&{{ querystring }}{% endif %}">Last</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

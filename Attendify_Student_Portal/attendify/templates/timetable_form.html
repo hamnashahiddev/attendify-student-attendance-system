@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}{% if editing %}Edit Timetable Slot{% else %}Add Timetable Slot{% endif %} · Attendify{% endblock %}
+{% block page_title %}{% if editing %}Edit Timetable Slot{% else %}Schedule Lecture Slot{% endif %}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">{% if editing %}Edit Timetable Slot{% else %}Schedule New Timetable Slot{% endif %}</h3>
+    <p class="text-muted mb-0">Assign class, subject, teacher, day, time, and room</p>
+  </div>
+  <a href="{% url 'timetable' %}" class="btn btn-light border">
+    <i class="bi bi-arrow-left me-1"></i> Back to Timetable
+  </a>
+</div>
+
+<div class="row">
+  <div class="col-lg-6">
+    <div class="cardx">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+          {% for err in form.non_field_errors %}{{ err }}{% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="mb-3">
+          <label class="form-label">Class <span class="text-danger">*</span></label>
+          {{ form.classroom }}
+          {% for e in form.classroom.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Subject <span class="text-danger">*</span></label>
+          {{ form.subject }}
+          {% for e in form.subject.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Teacher</label>
+          {{ form.teacher }}
+          {% for e in form.teacher.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Day of Week <span class="text-danger">*</span></label>
+          {{ form.day_of_week }}
+          {% for e in form.day_of_week.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+        </div>
+
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <label class="form-label">Start Time <span class="text-danger">*</span></label>
+            {{ form.start_time }}
+            {% for e in form.start_time.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+          </div>
+          <div class="col-6">
+            <label class="form-label">End Time <span class="text-danger">*</span></label>
+            {{ form.end_time }}
+            {% for e in form.end_time.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label">Room / Hall</label>
+          {{ form.room_number }}
+          {% for e in form.room_number.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary px-4">Save Slot</button>
+          <a class="btn btn-light border" href="{% url 'timetable' %}">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

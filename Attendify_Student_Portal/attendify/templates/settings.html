@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}System Settings · Attendify{% endblock %}
+{% block page_title %}Portal Configuration{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">System Settings</h3>
+    <p class="text-muted mb-0">Configure portal thresholds and institutional metadata</p>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-6">
+    <div class="cardx">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+          {% for err in form.non_field_errors %}{{ err }}{% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="mb-3">
+          <label class="form-label">Portal / Institution Name</label>
+          {{ form.site_name }}
+          {% for e in form.site_name.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+          <small class="text-muted">Displays in portal branding and reports.</small>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Attendance Warning Threshold (%)</label>
+          {{ form.threshold }}
+          {% for e in form.threshold.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+          <div class="alert alert-light border small text-muted mt-2">
+            <b>Standing Classification Rules:</b><br>
+            • <b>Safe:</b> Attendance &ge; Threshold + 10%<br>
+            • <b>Warning:</b> Attendance &ge; Threshold and &lt; Threshold + 10%<br>
+            • <b>Critical:</b> Attendance &lt; Threshold (triggers dashboard alerts and advisories)
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary px-4 mt-2">
+          <i class="bi bi-save me-1"></i> Save Settings
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

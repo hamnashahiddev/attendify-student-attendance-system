@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}{% if editing %}Edit Student · {{ form.instance.student_id }}{% else %}Add New Student{% endif %} · Attendify{% endblock %}
+{% block page_title %}{% if editing %}Edit Student Profile{% else %}Enroll New Student{% endif %}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">{% if editing %}Edit Student Profile{% else %}Enroll New Student{% endif %}</h3>
+    <p class="text-muted mb-0">Fill in the student credentials and academic assignment below</p>
+  </div>
+  <a href="{% url 'students' %}" class="btn btn-light border">
+    <i class="bi bi-arrow-left me-1"></i> Back to Students
+  </a>
+</div>
+
+<div class="row">
+  <div class="col-lg-8">
+    <div class="cardx">
+      <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+          {% for err in form.non_field_errors %}{{ err }}{% endfor %}
+        </div>
+        {% endif %}
+
+        <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">1. Academic Information</h6>
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label">Student ID <span class="text-danger">*</span></label>
+            {{ form.student_id }}
+            {% for e in form.student_id.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+            <small class="text-muted">Unique registration ID (e.g. S2026001)</small>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Assigned Class <span class="text-danger">*</span></label>
+            {{ form.classroom }}
+            {% for e in form.classroom.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Enrollment Status <span class="text-danger">*</span></label>
+            {{ form.status }}
+            {% for e in form.status.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+          </div>
+        </div>
+
+        <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-4">2. Personal & Contact Details</h6>
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label">First Name <span class="text-danger">*</span></label>
+            {{ form.first_name }}
+            {% for e in form.first_name.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Last Name <span class="text-danger">*</span></label>
+            {{ form.last_name }}
+            {% for e in form.last_name.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Email Address <span class="text-danger">*</span></label>
+            {{ form.email }}
+            {% for e in form.email.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Phone Number</label>
+            {{ form.phone }}
+            {% for e in form.phone.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+          </div>
+          <div class="col-12">
+            <label class="form-label">Profile Photo</label>
+            {{ form.photo }}
+            {% for e in form.photo.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+          </div>
+        </div>
+
+        {% if not editing %}
+        <div class="alert alert-light border small text-muted mb-4">
+          <i class="bi bi-info-circle me-1"></i>
+          A user login account will automatically be created.
+          <b>Username:</b> Lowercase Student ID · <b>Default Password:</b> <code>student123</code>
+        </div>
+        {% endif %}
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-check-lg me-1"></i> Save Student
+          </button>
+          <a class="btn btn-light border" href="{% url 'students' %}">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

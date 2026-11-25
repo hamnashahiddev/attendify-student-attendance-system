@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% block title %}Attendance Reports · Attendify{% endblock %}
+{% block page_title %}Analytics & Reports{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">Attendance Reports</h3>
+    <p class="text-muted mb-0">Generate, analyze, print, and export attendance records</p>
+  </div>
+  <div class="d-flex gap-2">
+    <button onclick="window.print()" class="btn btn-outline-secondary">
+      <i class="bi bi-printer me-1"></i> Print Report
+    </button>
+    <a href="{% url 'reports_export' %}?tab={{ tab }}{% if tab == 'daily' %}&date={{ target_date|date:'Y-m-d' }}{% elif selected_class %}&class={{ selected_class }}{% endif %}" class="btn btn-outline-success">
+      <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Tab CSV
+    </a>
+  </div>
+</div>
+
+<!-- Report Navigation Tabs -->
+<ul class="nav nav-pills mb-4 gap-2">
+  <li class="nav-item">
+    <a class="nav-link {% if tab == 'daily' %}active{% endif %}" href="?tab=daily">
+      <i class="bi bi-calendar-date me-1"></i> Daily Report
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if tab == 'class' %}active{% endif %}" href="?tab=class">
+      <i class="bi bi-building me-1"></i> Class Overview
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if tab == 'students' %}active{% endif %}" href="?tab=students">
+      <i class="bi bi-people me-1"></i> Student Standings
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if tab == 'low' %}active text-white bg-danger{% endif %}" href="?tab=low">
+      <i class="bi bi-exclamation-triangle me-1"></i> Low Attendance (<{{ threshold }}%)
+    </a>
+  </li>
+</ul>
+
+<!-- Filter bar based on tab -->
+<div class="cardx mb-4 no-print">
+  <form method="get" class="row g-3 align-items-end">
+    <input type="hidden" name="tab" value="{{ tab }}">
+    {% if tab == 'daily' %}
+    <div class="col-md-4">
+      <label class="form-label small">Target Date</label>
+      <input type="date" class="form-control" name="date" value="{{ target_date|date:'Y-m-d' }}">
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary w-100">Update Report</button>
+    </div>
+    {% elif tab == 'students' or tab == 'low' %}
+    <div class="col-md-4">
+      <label class="form-label small">Filter by Class</label>
+      <select class="form-select" name="class" onchange="this.form.submit()">
+        <option value="">All Classes</option>
+        {% for c in classes %}
+        <option value="{{ c.pk }}" {% if selected_class == c.pk|stringformat:'s' %}selected{% endif %}>
+          {{ c.name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary w-100">Filter</button>
+    </div>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Tab 1: Daily Report -->
+{% if tab == 'daily' %}
+<div class="cardx table-responsive mb-4">
+  <h6 class="fw-bold mb-3"><i class="bi bi-calendar-check me-2 text-primary"></i>Daily Attendance Summary for {{ target_date|date:"l, d F Y" }}</h6>
+  <table class="table table-hover align-middle mb-0">
+    <thead>
+      <tr>
+        <th>Class</th>
+        <th class="text-center">Recorded Sessions</th>
+        <th class="text-center">Present</th>
+        <th class="text-center">Absent</th>
+        <th class="text-center">Late</th>
+        <th class="text-center">Leave</th>
+        <th class="text-end">Attendance Rate</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in daily_reports %}
+      <tr>
+        <td class="fw-bold">{{ r.classroom.name }}</td>
+        <td class="text-center">{{ r.total }}</td>
+        <td class="text-center text-success fw-semibold">{{ r.present }}</td>
+        <td class="text-center text-danger fw-semibold">{{ r.absent }}</td>
+        <td class="text-center text-warning fw-semibold">{{ r.late }}</td>
+        <td class="text-center text-info fw-semibold">{{ r.leave }}</td>
+        <td class="text-end">
+          <span class="pill {% if r.pct >= threshold %}badge-safe{% else %}badge-critical{% endif %}">
+            {{ r.pct }}%
+          </span>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7" class="text-center text-muted py-4">No attendance data recorded on this date.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- Tab 2: Class Overview Report -->
+{% if tab == 'class' %}
+<div class="cardx table-responsive mb-4">
+  <h6 class="fw-bold mb-3"><i class="bi bi-building me-2 text-primary"></i>Cumulative Class Attendance Performance</h6>
+  <table class="table table-hover align-middle mb-0">
+    <thead>
+      <tr>
+        <th>Class Name</th>
+        <th>Department</th>
+        <th class="text-center">Active Students</th>
+        <th class="text-center">Total Records</th>
+        <th class="text-center">Present</th>
+        <th class="text-center">Absent</th>
+        <th class="text-center">Late</th>
+        <th class="text-center">Leave</th>
+        <th class="text-end">Average Attendance</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in class_reports %}
+      <tr>
+        <td class="fw-bold">
+          <a href="{% url 'class_detail' r.classroom.pk %}" class="text-decoration-none">
+            {{ r.classroom.name }}
+          </a>
+        </td>
+        <td>{{ r.classroom.department.code }}</td>
+        <td class="text-center">{{ r.student_count }}</td>
+        <td class="text-center">{{ r.total_records }}</td>
+        <td class="text-center text-success">{{ r.present }}</td>
+        <td class="text-center text-danger">{{ r.absent }}</td>
+        <td class="text-center text-warning">{{ r.late }}</td>
+        <td class="text-center text-info">{{ r.leave }}</td>
+        <td class="text-end">
+          <span class="pill badge-{{ r.level }}">{{ r.pct }}%</span>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="9" class="text-center text-muted py-4">No class attendance data available.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- Tab 3 & 4: Students / Low Attendance Report -->
+{% if tab == 'students' or tab == 'low' %}
+<div class="cardx table-responsive mb-4">
+  <h6 class="fw-bold mb-3">
+    {% if tab == 'low' %}
+    <span class="text-danger"><i class="bi bi-exclamation-octagon me-2"></i>Students Below Required Threshold ({{ threshold }}%)</span>
+    {% else %}
+    <i class="bi bi-people me-2 text-primary"></i>Student Standings Report
+    {% endif %}
+  </h6>
+  <table class="table table-hover align-middle mb-0">
+    <thead>
+      <tr>
+        <th>Student ID</th>
+        <th>Student Name</th>
+        <th>Class</th>
+        <th class="text-center">Total Sessions</th>
+        <th class="text-center">Attended (P+L)</th>
+        <th class="text-center">Present</th>
+        <th class="text-center">Absent</th>
+        <th class="text-center">Late</th>
+        <th class="text-center">Leave</th>
+        <th class="text-end">Attendance %</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% with rows=low_reports|default:student_reports %}
+      {% for r in rows %}
+      <tr>
+        <td>
+          <a href="{% url 'student_detail' r.student.pk %}" class="text-decoration-none fw-bold">
+            {{ r.student.student_id }}
+          </a>
+        </td>
+        <td>{{ r.student.user.get_full_name }}</td>
+        <td><span class="badge bg-light text-dark border">{{ r.student.classroom.name }}</span></td>
+        <td class="text-center">{{ r.total }}</td>
+        <td class="text-center fw-semibold">{{ r.attended }}</td>
+        <td class="text-center text-success">{{ r.present }}</td>
+        <td class="text-center text-danger">{{ r.absent }}</td>
+        <td class="text-center text-warning">{{ r.late }}</td>
+        <td class="text-center text-info">{{ r.leave }}</td>
+        <td class="text-end">
+          <span class="pill badge-{{ r.level }}">{{ r.pct }}%</span>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="10" class="text-center text-muted py-4">
+          {% if tab == 'low' %}
+          <i class="bi bi-check-circle text-success fs-3 d-block mb-1"></i>
+          Great news! No students are currently below the {{ threshold }}% attendance threshold.
+          {% else %}
+          No student records found.
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      {% endwith %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}
